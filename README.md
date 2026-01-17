@@ -48,5 +48,3 @@ The system replies in voice: *“Your test drive is scheduled for tomorrow at 11
 4. Send a POST request with `audioUrl` to `/voice-call`
 
 ---
-
-Want this in **ultra-minimal one-paragraph GitHub version**?
