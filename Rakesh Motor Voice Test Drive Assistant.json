@@ -1,0 +1,606 @@
+{
+  "name": "Rakesh Motor Voice Test Drive Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "voice-call",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "21f5c4bc-d7cd-4ebe-9522-4386d46c6798",
+      "name": "Voice Call Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1904,
+        1120
+      ],
+      "webhookId": "ccac2ea9-bee2-4486-b4ea-e6c94dcc7072"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "sessionId",
+              "value": "={{ $json.body.sessionId || 'session-' + $now.toUnixInteger() }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "audioUrl",
+              "value": "={{ $json.body.audioUrl || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "16f10a2d-4ff2-47a4-a953-992f94543bd1",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2128,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "sessionKey": "={{ $('Workflow Configuration').item.json.sessionId }}",
+        "contextWindowLength": 10
+      },
+      "id": "a562040a-7ba9-484b-9018-bc8353760868",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        2800,
+        1344
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Speech to Text (STT)').item.json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a friendly car dealership assistant for Premium Auto Sales. Help customers learn about our vehicles and book test drives. Be conversational and helpful. When a customer wants to book a test drive, use the Google Calendar tool to schedule it. Always confirm the vehicle model, date, and time before booking. After successfully booking, provide the confirmation details to the customer."
+        }
+      },
+      "id": "34d82b2f-116c-4de5-aea8-727b03eb2723",
+      "name": "Conversational Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3040,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "vehicleInfo",
+              "value": "Our dealership offers: Tesla Model 3 ($45,000, electric, 358 mile range), Toyota Camry ($28,000, hybrid, excellent fuel economy), Ford F-150 ($38,000, pickup truck, powerful), Honda CR-V ($32,000, SUV, family-friendly). Test drives available Monday-Saturday 9AM-6PM.",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "dealershipInfo",
+              "value": "Premium Auto Sales - 123 Main Street. Open Mon-Sat 9AM-6PM, closed Sundays. Phone: (555) 123-4567. Appointments required for test drives.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "651e31e8-ccaf-4acb-9815-d6c08d9fb1fd",
+      "name": "Prepare Knowledge Base Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2128,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "chunkSize": 500,
+        "chunkOverlap": 50,
+        "options": {}
+      },
+      "id": "ed9976e0-466d-42b1-a191-6a62ca79aee2",
+      "name": "Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        2432,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "id": "c9d524ad-0229-4f45-a188-2d7f2c3a9700",
+      "name": "Document Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        2352,
+        1984
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search vehicle inventory and dealership information including models, pricing, features, and hours",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "id",
+          "value": "vector_store_key"
+        },
+        "topK": 3
+      },
+      "id": "df3bc82b-17d6-4cbb-b24b-7be01ed4e1f6",
+      "name": "Knowledge Base Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        2928,
+        1344
+      ]
+    },
+    {
+      "parameters": {
+        "path": "load-kb",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "b1226a03-67ed-4a3f-98ef-c91d092d52dd",
+      "name": "Load Knowledge Base Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1904,
+        1760
+      ],
+      "webhookId": "43980a57-e9a7-4840-9f7d-643887bb11ad"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "id",
+          "value": "vector_store_key"
+        },
+        "clearStore": true
+      },
+      "id": "bd8ba6c3-c342-438d-a028-5bd7d74bb862",
+      "name": "Insert Knowledge Base Data",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        2464,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "audio/mpeg"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f3648612-9910-4928-99b4-86fe9ca612bb",
+      "name": "Send Voice Response1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        4128,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Workflow Configuration').item.json.audioUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "68d65969-9d11-4b40-ad12-539e129c22d9",
+      "name": "Download Audio File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2352,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "response",
+              "value": "={{ $('Conversational Agent').item.json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0eb3c3d2-7fb1-40c0-95e1-837c33185067",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3552,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "models/gemini-1.5-flash"
+        },
+        "inputType": "binary",
+        "options": {}
+      },
+      "id": "3f68fd85-d3a2-426d-b18b-96ba2489d5b5",
+      "name": "Speech to Text (STT)",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        2576,
+        1120
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Tb07tGtc7241Qoy0",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "models/gemini-1.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $('Format Response').item.json.response }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "4657f910-acdb-4006-b641-cc011326696d",
+      "name": "Text to Speech (TTS)",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        3776,
+        1120
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Tb07tGtc7241Qoy0",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "gemini-1.5-pro",
+        "options": {}
+      },
+      "id": "8b6a1e8b-f24d-432b-9b7b-c7d68964cb0e",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3216,
+        1344
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Tb07tGtc7241Qoy0",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "2f3e77ff-ac02-4f9e-a58c-a5bba08620f2",
+      "name": "Embeddings Google Gemini",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        1984
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Tb07tGtc7241Qoy0",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "0b83d4b3-c416-4975-ab7b-3232fabe45fa",
+      "name": "Retrieval Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3008,
+        1552
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "Tb07tGtc7241Qoy0",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Calendar', ``, 'string') }}"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', `Start date and time in ISO format`, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', `End date and time in ISO format (1 hour after start)`, 'string') }}",
+        "additionalFields": {
+          "description": "={{ $fromAI('description', 'Test drive details including customer phone and vehicle') }}",
+          "summary": "={{ $fromAI('summary', 'Event title including customer name and vehicle model') }}"
+        }
+      },
+      "id": "98695b85-3f7c-4a95-9661-d640a879eff9",
+      "name": "Google Calendar Tool",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        3344,
+        1344
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "7BqZ8FJ40NwKmaK2",
+          "name": "Google Calendar account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Voice Call Webhook": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Speech to Text (STT)": {
+      "main": [
+        [
+          {
+            "node": "Conversational Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Conversational Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Knowledge Base Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Conversational Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Document Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Insert Knowledge Base Data",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversational Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text to Speech (TTS)": {
+      "main": [
+        [
+          {
+            "node": "Send Voice Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Knowledge Base Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Knowledge Base Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Knowledge Base Data": {
+      "main": [
+        [
+          {
+            "node": "Insert Knowledge Base Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieval Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Knowledge Base Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Download Audio File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Audio File": {
+      "main": [
+        [
+          {
+            "node": "Speech to Text (STT)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Text to Speech (TTS)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Conversational Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Calendar Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Conversational Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Insert Knowledge Base Data",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "b3b2e268-b2e1-423d-aed3-6e379a58c7a1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "874d11919873d335b766308c6d81b0e7d980a27f868064c02b95350886145527"
+  },
+  "id": "MmUf_JaSaTGyNwhPERo3R",
+  "tags": []
+}
